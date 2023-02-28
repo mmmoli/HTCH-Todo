@@ -12,5 +12,5 @@ export interface Note {
   content: NoteContent;
   status: NoteStatus;
   createdAt: Date;
-  modifedAt: Date;
+  updatedAt: Date;
 }
