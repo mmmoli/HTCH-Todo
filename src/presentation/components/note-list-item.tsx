@@ -1,5 +1,13 @@
-import { FC } from "react";
+import { FC, ReactNode } from "react";
 
-export const NoteListItem: FC = () => {
-  return <div>NoteListItem</div>;
+export type NoteListItemProps = {
+  title: ReactNode;
+};
+
+export const NoteListItem: FC<NoteListItemProps> = ({ title }) => {
+  return (
+    <div>
+      <input value={title?.toString()}></input>
+    </div>
+  );
 };
