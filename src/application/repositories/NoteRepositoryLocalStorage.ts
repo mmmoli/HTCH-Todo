@@ -2,10 +2,16 @@ import { Note, NoteStatus } from "../../domain/models";
 import { CreateNoteParams, NoteRepository } from "../../domain/repositories";
 import { LocalforageService } from "../services";
 import { v4 as uuidv4 } from "uuid";
+import { from, Observable } from "rxjs";
 
-export class LocalStorageNoteRepository implements NoteRepository {
+export class NoteRepositoryLocalStorage implements NoteRepository {
   constructor(private store: LocalforageService) {}
-  createNote(args: CreateNoteParams): Promise<Note> {
+
+  getAllNotes(): Observable<Note[]> {
+    return from(this.store.list<Note>());
+  }
+
+  createNote(args: CreateNoteParams): Observable<Note> {
     const id = uuidv4();
     const note: Note = {
       id,
@@ -15,6 +21,6 @@ export class LocalStorageNoteRepository implements NoteRepository {
       status: args.status || NoteStatus.DRAFT,
       title: args.title,
     };
-    return this.store.set<Note>(id, note);
+    return from(this.store.set<Note>(id, note));
   }
 }

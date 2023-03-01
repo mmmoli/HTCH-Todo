@@ -1,6 +1,7 @@
 import { Note, NoteStatus } from "../../models";
 import { NoteRepository } from "../../repositories";
 import { UseCase } from "../utils/UseCase";
+import { Observable } from "rxjs";
 
 export type CreateNoteUseCaseParams = {
   content?: string;
@@ -11,7 +12,7 @@ export type CreateNoteUseCaseParams = {
 export abstract class CreateNoteUseCase
   implements UseCase<Note, CreateNoteUseCaseParams>
 {
-  execute(_params: CreateNoteUseCaseParams): Promise<Note> {
+  execute(_params: CreateNoteUseCaseParams): Observable<Note> {
     throw new Error("Method not implemented.");
   }
 }
@@ -19,12 +20,12 @@ export abstract class CreateNoteUseCase
 export class CreateNoteUseCaseImpl implements CreateNoteUseCase {
   constructor(private noteRepository: NoteRepository) {}
 
-  async execute({
+  execute({
     title = "My New note",
     content = "Write your note here…",
     status = NoteStatus.DRAFT,
-  }: CreateNoteUseCaseParams): Promise<Note> {
-    const note = await this.noteRepository.createNote({
+  }: CreateNoteUseCaseParams): Observable<Note> {
+    const note = this.noteRepository.createNote({
       title,
       status,
       content,

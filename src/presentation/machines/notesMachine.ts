@@ -1,48 +1,58 @@
 import { atomWithMachine } from "jotai-xstate";
 import { createMachine, assign, spawn } from "xstate";
-import type { Note } from "../../domain/models";
-import { ListNotesUseCaseImpl } from "../../domain/usecases";
-import { NoteRepositoryInMemory } from "../../infra/repositories/NoteRepositoryInMemory";
+import { Note, NoteStatus } from "../../domain/models";
+import { getListNotesUseCase } from "../../application/views";
 import { createNoteMachine } from "./noteMachine";
+import type { Observable } from "rxjs";
+import { map, first } from "rxjs/operators";
 
 type Context = {
   notes: Note[];
-  noteMachines: Record<string, ReturnType<typeof createNoteMachine>>;
+  noteMachines: unknown;
 };
 
-type NoteEvent = { type: "EDIT" } | { type: "CANCEL" } | { type: "CHANGE" };
+type NoteEvent =
+  | { type: "EDIT" }
+  | { type: "CANCEL" }
+  | { type: "CHANGE" }
+  | { type: "NOTES_RECEIVED"; data: Note[] };
 
 export const createNotesMachine = () =>
   createMachine(
     {
-      /** @xstate-layout N4IgpgJg5mDOIC5QDsD2AXOA6ANqghhAJbJQDEEqyYWJAbqgNY1qay4HGkL2oDG+dESoBtAAwBdcRMSgADqlhEhVWSAAeiAKwAWAJxYATAEYAHAHZzW42MOmxY8wBoQAT0SG9ANiw7DXrXN9L3MAgGY9AF9Il1ZsPEIScjAAJxTUFKw5HEEAMwyAWyw49gSuKB5kBgEVZGlpNQUlWrVNBF0DEwsrGzsHZzcPHVMsPX8tLXtDMW8HHWjYjGwiCBwwMgBRABEASQAVBqQQJuVhZFbELz0dUeMdMS8HsL87F3cEP2MsKz1TPSC9FpHGEtAsQCUsJBTqQyABhACCADlYRsADKHeSKU6qI5tYxeG7mcYhIKGaamLRvbR+LBA356bymAJBMEQqFCGGwgASSIA4hsMccsS1cYgaQ4JZLJcYqQgwl4fD8-mFjMZpkTzKylux2UkyOpYOhBDR8LlMCkABTTBwASjIbOIHKggpOItAeIJ32JlheYgpspsPmlXUM9z0aq1bCwsHwdD1lGotCqTBY2ujsaSlWqgjO9UkjWFZwu7X0RjMlmstnsjgDE185meWkM5lMOisYUMoJi4LTMbjMNS6Uy2TyhWKvYz3F4NVzkhdhZx7upnXLPSr-Vl4e+QLEqq8IK0ATEYWi3bQEDgahKBeaRdFCAAtFpRgzX2+32FZQ+vJH4pwkje2LnPedg3MMOhhKYxhjLuIIKrKhhhGIWAOPS9JQQ2XaLFGKxrIBboaIgpgmKMXTKv8Cp+AGfy0pKehiBBfq6L+OqOgBRyuneS7tF8+LmIykyQRMsovEYWj0gCQINj+Z5poOGT4VxhEIMRXxjGY5GhAShiylBtEShYx7mHxMnYdgfbsZit6LspdgGOBkHQdMxhwV4ulfDu-REiq1g6DJ0RAA */
+      /** @xstate-layout N4IgpgJg5mDOIC5QDsD2AXOA6ANqghhAJbJQDEEqyYWJAbqgNY1qay4HGkL2oDG+dESoBtAAwBdcRMSgADqlhEhVWSAAeiAGwAmLVi0AWMVoCMADkNaArKYDMpgDQgAnoh0B2Q1nNiAnH46ftbWhh6mHmJ2AL7RzqzYeIQk5GAATmmoaVhyOIIAZlkAtlgJ7ElcUDzIDAIqyNLSagpK9WqaCLr6RiYWVrYOzm4IOp5Ydv5+dp7WllpaXrHxGNhEEDhgZACiACIAkgAqTUggLcrCyO2IHh4643bWfqZBJh7mukOIhqZiWGE2fg8dnmTzE1iWIDKWEg51IZAAwgBBABy8K2ABljvJFOdVCcOjpDHdTIZLA8FjootYdNZPghrA4sKMATdCQzLBCoTChHD4QAJFEAcS2WNOOLa+MQPz8fx0FnmHj883mjzp-XGtkeWnMEys5g8nJW7G5KTI6lg6EENHw+UwaQAFJSxGIAJRkLnEHlQUVnCWgAlErAksnWClUml0+weLC3GzmALfMKhw1sLCwfB0U2Uai0GpMFhGtMZlLVWqCC6NSTNcUXK6dPQGYxmOYDJyuKVBLDO51BOX+czmcFxSGF9OZuHpTLZXIFYqlUfF7i8OoVyQ+mt4-3aBs9Zv9ext4bmUxYazd6aJoHHwwpuBkZEAeQOWwAygB9ABKWzRewAart11aWtJQQH5Qy7Bk7HCQxjBpLQ1TuR4wS0KDviVR5zFiYc0AgOA1DKasgM3DRtBPIl5QWJVlVVdsEAAWhgrA-H8QwHCg54xBmW9yk4FJCNxS4QOBE9mK6CYUIHaY6TlcwYz0WZLBYwwAi0bjaHWMB+L9EiEAHGU7FYrxngcY8-EMNUfiYjwWWBLRQSHZZUxNUgtOArdQIsU94x1d4SRghxaVo6lfkHUxHg8UJrFuGC1MnLJXOIjo9PGQzvh0EzTDMyN3gggJ2OUgzmTUsc+JOX03J02ymJMPRxLsSSdEjewmXkgc9EBTUDSwoA */
       id: "notes",
       tsTypes: {} as import("./notesMachine.typegen").Typegen0,
       context: {
-        notes: [] as Note[],
+        notes: [],
         noteMachines: {},
       },
+
       schema: {
         context: {} as Context,
         events: {} as NoteEvent,
       },
+
       initial: "loading",
       predictableActionArguments: true,
       preserveActionOrder: true,
+
       states: {
         loading: {
           entry: ["notify: is loading"],
+
           invoke: {
             src: "UseCase: Load Notes",
             onDone: {
               target: "idle",
-              actions: ["assign: all notes", "spawn note machines"],
             },
             onError: "error",
           },
+
           meta: {
             message: "Loading notes...",
           },
+
           tags: ["loading"],
         },
 
@@ -91,11 +101,27 @@ export const createNotesMachine = () =>
           tags: ["loading"],
         },
       },
+
+      on: {
+        NOTES_RECEIVED: {
+          target: "idle",
+          actions: ["assign: incomming notes", "spawn: note machines"],
+        },
+      },
     },
     {
       actions: {
-        "assign: all notes": assign({
-          notes: (_, event) => event.data as Note[],
+        "assign: incomming notes": assign({
+          notes: (_, event) => [
+            {
+              content: "Content 1",
+              createdAt: new Date(),
+              id: "1",
+              status: NoteStatus.DRAFT,
+              title: "Eat more chips",
+              updatedAt: new Date(),
+            },
+          ],
         }),
         "assign: append notes": assign({
           notes: (context, event) => [...context.notes],
@@ -103,19 +129,17 @@ export const createNotesMachine = () =>
         "notify: is loading": () => {
           console.log("loading…");
         },
-        "spawn note machines": () => {
-          console.log("spawn note machines");
-        },
-        // "spawn note machines": assign({
-        //   noteMachines: (context) =>
-        //     context.notes.map((note) => spawn(createNoteMachine(note))),
-        // }),
+        "spawn: note machines": assign({
+          noteMachines: ({ notes }) =>
+            notes.map((note) =>
+              spawn(createNoteMachine(note), `note-${note.id}`)
+            ),
+        }),
       },
       services: {
-        "UseCase: Load Notes": async (context, event) => {
-          const noteRepository = new NoteRepositoryInMemory();
-          const listNotesUseCase = new ListNotesUseCaseImpl(noteRepository);
-          return listNotesUseCase.execute();
+        "UseCase: Load Notes": () => {
+          const notes = getListNotesUseCase().execute().pipe(first());
+          return notes;
         },
         "UseCase: Save Note": async (context, event) => {
           return Promise.resolve([]);

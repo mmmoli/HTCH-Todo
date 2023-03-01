@@ -18,13 +18,14 @@ export const NoteList: FC = () => {
 
       {(state.matches("idle") || state.matches("editing")) && (
         <>
-          {state.context.notes.map((note) => (
+          <pre>{JSON.stringify(state.context, undefined, 2)}</pre>
+          {/* {state.context.notes.map((note) => (
             <NoteListItem
               key={note.id ?? "note-id"}
               title={note.title}
               id={note.id}
             />
-          ))}
+          ))} */}
         </>
       )}
 

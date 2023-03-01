@@ -5,9 +5,5 @@ export type NoteListItemProps = {
 };
 
 export const NoteListItem: FC<NoteListItemProps> = ({ title }) => {
-  return (
-    <div>
-      <input value={title?.toString()}></input>
-    </div>
-  );
+  return <div>{JSON.stringify(title)}</div>;
 };

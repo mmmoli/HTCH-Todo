@@ -1,6 +1,7 @@
 import { Note, NoteStatus } from "../../domain/models";
 import { CreateNoteParams, NoteRepository } from "../../domain/repositories";
 import { v4 as uuidv4 } from "uuid";
+import { of, Observable } from "rxjs";
 
 const now = new Date();
 export class NoteRepositoryInMemory implements NoteRepository {
@@ -10,7 +11,7 @@ export class NoteRepositoryInMemory implements NoteRepository {
       createdAt: now,
       id: "1",
       status: NoteStatus.DRAFT,
-      title: "Note 1",
+      title: "Eat more chips",
       updatedAt: now,
     },
     {
@@ -18,16 +19,16 @@ export class NoteRepositoryInMemory implements NoteRepository {
       createdAt: now,
       id: "2",
       status: NoteStatus.RESOLVED,
-      title: "Note 2",
+      title: "Sleep more",
       updatedAt: now,
     },
   ];
 
-  getAllNotes(): Promise<Note[]> {
-    return Promise.resolve(this.notes);
+  getAllNotes(): Observable<Note[]> {
+    return of(this.notes);
   }
 
-  createNote(args: CreateNoteParams): Promise<Note> {
+  createNote(args: CreateNoteParams): Observable<Note> {
     const id = uuidv4();
     const note: Note = {
       id,
@@ -37,6 +38,6 @@ export class NoteRepositoryInMemory implements NoteRepository {
       status: args.status || NoteStatus.DRAFT,
       title: args.title,
     };
-    return Promise.resolve(note);
+    return of(note);
   }
 }
